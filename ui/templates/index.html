@@ -1,0 +1,2097 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>cppjava — C++ to Java Compiler & Runner</title>
+<link rel="stylesheet" href="/static/cm/codemirror.min.css"/>
+<link rel="stylesheet" href="/static/cm/one-dark.min.css"/>
+
+<style>
+/* ─────────────────────────────────────────────────────────────
+   DESIGN SYSTEM — High-End Engineering Workspace (Cursor/VS Code)
+───────────────────────────────────────────────────────────── */
+:root {
+  /* Dark theme (default) */
+  --bg-app:        #0d1117;
+  --bg-surface:    #161b22;
+  --bg-surface-2:  #21262d;
+  --bg-surface-3:  #30363d;
+  --border-subtle: #21262d;
+  --border-strong: #30363d;
+  --border-hover:  #484f58;
+  
+  --text-main:     #f0f6fc;
+  --text-muted:    #c9d1d9;     /* > 9:1 against #0d1117 */
+  --text-dim:      #8b949e;     /* > 5.1:1 against #0d1117 */
+  
+  --brand-primary: #1f6feb;     /* 4.7:1 with white */
+  --brand-hover:   #1158c7;     /* 5.6:1 with white */
+  --brand-subtle:  rgba(31, 111, 235, 0.15);
+  
+  --success:       #238636;     /* 4.6:1 with white */
+  --success-hover: #196c2e;     /* 5.4:1 with white */
+  --success-subtle:rgba(35, 134, 54, 0.15);
+  
+  --danger:        #da3633;     /* 4.6:1 with white */
+  --danger-hover:  #b62324;     /* 5.5:1 with white */
+  --danger-subtle: rgba(218, 54, 51, 0.15);
+  
+  --warning:       #d29922;
+  
+  --font-sans:     -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, sans-serif;
+  --font-mono:     ui-monospace, "SFMono-Regular", "Cascadia Code", Menlo, Consolas, monospace;
+  
+  --radius-sm:     4px;
+  --radius-md:     6px;
+  --radius-lg:     8px;
+  --radius-full:   9999px;
+  
+  --shadow-sm:     0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md:     0 4px 12px rgba(0, 0, 0, 0.4);
+  --focus-ring:    0 0 0 2px var(--bg-app), 0 0 0 4px #388bfd;
+}
+
+[data-theme="light"] {
+  --bg-app:        #ffffff;
+  --bg-surface:    #f6f8fa;
+  --bg-surface-2:  #eaedf1;
+  --bg-surface-3:  #d0d7de;
+  --border-subtle: #d0d7de;
+  --border-strong: #afb8c1;
+  --border-hover:  #8c959f;
+  
+  --text-main:     #1f2328;
+  --text-muted:    #424a53;     /* 7.5:1 against white */
+  --text-dim:      #57606a;     /* 5.6:1 against white */
+  
+  --brand-primary: #0969da;
+  --brand-hover:   #054da7;
+  --brand-subtle:  rgba(9, 105, 218, 0.12);
+  
+  --success:       #1a7f37;
+  --success-hover: #116327;
+  --success-subtle:rgba(26, 127, 55, 0.12);
+  
+  --danger:        #cf222e;
+  --danger-hover:  #a40e26;
+  --danger-subtle: rgba(207, 34, 46, 0.12);
+  
+  --warning:       #9a6700;
+  
+  --shadow-sm:     0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md:     0 4px 12px rgba(0, 0, 0, 0.1);
+  --focus-ring:    0 0 0 2px #ffffff, 0 0 0 4px #0969da;
+}
+
+/* ── Reset & Core ──────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html {
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-app);
+  color: var(--text-main);
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  line-height: 1.5;
+}
+
+::selection {
+  background: var(--brand-subtle);
+  color: inherit;
+}
+
+/* ── Header ────────────────────────────────────────────────── */
+#header {
+  flex: 0 0 52px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-strong);
+  z-index: 20;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  user-select: none;
+}
+.brand-icon-box {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background: var(--brand-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 13px;
+  box-shadow: var(--shadow-sm);
+}
+.brand-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.brand-badge {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border-strong);
+}
+
+.divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-strong);
+  flex-shrink: 0;
+}
+.spacer { flex: 1; }
+
+/* Class Input Pill */
+.class-input-group {
+  display: flex;
+  align-items: center;
+  background: var(--bg-app);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 3px 10px;
+  gap: 6px;
+  transition: border-color 0.15s;
+}
+.class-input-group:focus-within {
+  border-color: var(--brand-primary);
+}
+.class-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.class-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  width: 95px;
+}
+
+/* Primary Action Buttons */
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, opacity 0.12s;
+  white-space: nowrap;
+  user-select: none;
+}
+.btn-action:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.btn-action:active {
+  transform: translateY(1px);
+}
+
+.btn-convert {
+  background: var(--brand-primary);
+  color: #ffffff;
+}
+.btn-convert:hover {
+  background: var(--brand-hover);
+}
+.btn-convert.busy {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.btn-run {
+  background: var(--success);
+  color: #ffffff;
+}
+.btn-run:hover {
+  background: var(--success-hover);
+}
+.btn-run:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn-run.busy {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.btn-stop {
+  background: var(--danger);
+  color: #ffffff;
+  display: none;
+}
+.btn-stop:hover {
+  background: var(--danger-hover);
+}
+
+.kbd-badge {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.2);
+  color: inherit;
+  margin-left: 2px;
+}
+
+/* Secondary Button Style */
+.btn-secondary {
+  background: var(--bg-surface-2);
+  color: var(--text-main);
+  border-color: var(--border-strong);
+  padding: 6px 12px;
+}
+.btn-secondary:hover {
+  background: var(--bg-surface-3);
+  border-color: var(--border-hover);
+}
+
+/* Icon Buttons */
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.btn-icon:hover {
+  background: var(--bg-surface-2);
+  color: var(--text-main);
+  border-color: var(--border-subtle);
+}
+.btn-icon:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.btn-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Spinner */
+.spinner-dot {
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: none;
+}
+.busy .spinner-dot { display: block; }
+.busy .btn-text { display: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Theme switch */
+.theme-switch-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface-2);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.theme-switch-btn:hover {
+  color: var(--text-main);
+  border-color: var(--border-hover);
+}
+
+#file-input { display: none; }
+
+/* ── Main App Layout ───────────────────────────────────────── */
+#app-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+  position: relative;
+}
+
+/* ── Left Sidebar (Corpus Explorer) ────────────────────────── */
+#sidebar {
+  flex: 0 0 240px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-strong);
+  overflow: hidden;
+  transition: flex-basis 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 10;
+}
+#sidebar.collapsed {
+  flex-basis: 0px;
+  border-right-color: transparent;
+}
+
+.sidebar-header {
+  padding: 12px 14px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+.sidebar-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.corpus-counter {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  font-weight: 600;
+  background: var(--bg-surface-2);
+  padding: 2px 7px;
+  border-radius: var(--radius-full);
+  color: var(--text-dim);
+  border: 1px solid var(--border-subtle);
+}
+
+.sidebar-search-wrap {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+.sidebar-search {
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--bg-app);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.sidebar-search:focus {
+  border-color: var(--brand-primary);
+}
+
+#examples-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+}
+#examples-list::-webkit-scrollbar { width: 5px; }
+#examples-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+
+.example-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: all 0.1s;
+  user-select: none;
+}
+.example-entry:hover {
+  background: var(--bg-surface-2);
+  color: var(--text-main);
+}
+.example-entry.active {
+  background: var(--brand-subtle);
+  color: var(--text-main);
+  border-left-color: var(--brand-primary);
+  font-weight: 600;
+}
+.example-idx {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  min-width: 20px;
+}
+.example-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.sidebar-footer {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.76rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  background: var(--bg-surface);
+  flex-shrink: 0;
+}
+
+/* ── Central Main Column ───────────────────────────────────── */
+#main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  position: relative;
+}
+
+/* Phase Stepper Bar */
+#phase-stepper {
+  flex: 0 0 36px;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 16px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.78rem;
+  overflow-x: auto;
+}
+#phase-stepper::-webkit-scrollbar { display: none; }
+.stepper-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-dim);
+  font-weight: 500;
+  white-space: nowrap;
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s, background 0.15s;
+}
+.stepper-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-dim);
+}
+.stepper-step.ok { color: var(--success); }
+.stepper-step.ok .stepper-dot { background: var(--success); }
+.stepper-step.active { color: var(--brand-primary); background: var(--brand-subtle); font-weight: 600; }
+.stepper-step.active .stepper-dot { background: var(--brand-primary); }
+.stepper-step.fail { color: var(--danger); background: var(--danger-subtle); font-weight: 600; }
+.stepper-step.fail .stepper-dot { background: var(--danger); }
+.stepper-arrow { color: var(--text-dim); font-size: 0.78rem; flex-shrink: 0; }
+
+/* Editors Row */
+#editors-split {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.editor-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  position: relative;
+  background: var(--bg-app);
+}
+
+.pane-tab-bar {
+  flex: 0 0 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 14px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-strong);
+  flex-shrink: 0;
+}
+
+.pane-file-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background: var(--bg-app);
+  border: 1px solid var(--border-strong);
+  border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-main);
+  position: relative;
+  top: 1px;
+}
+.file-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.04em;
+}
+.badge-cpp { background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); }
+.badge-java { background: rgba(249, 115, 22, 0.15); color: #f97316; border: 1px solid rgba(249, 115, 22, 0.3); }
+
+.pane-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* CodeMirror Host Container */
+.cm-container {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+.cm-container .CodeMirror {
+  position: absolute;
+  inset: 0;
+  height: 100% !important;
+  font-family: var(--font-mono) !important;
+  font-size: 13.5px !important;
+  line-height: 1.65 !important;
+}
+.CodeMirror-line-error { background: rgba(218, 54, 51, 0.15) !important; }
+
+/* Empty Placeholder for Java Output */
+#java-empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-dim);
+  background: var(--bg-app);
+  pointer-events: none;
+  user-select: none;
+}
+.empty-graphic {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+.empty-graphic svg { width: 26px; height: 26px; }
+.empty-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.empty-hint {
+  font-size: 0.82rem;
+  color: var(--text-dim);
+}
+.empty-hint kbd {
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-strong);
+  padding: 2px 7px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+/* Drag & Drop Visual Target */
+#drag-overlay {
+  display: none;
+  position: absolute;
+  inset: 10px;
+  z-index: 30;
+  background: var(--brand-subtle);
+  border: 2px dashed var(--brand-primary);
+  border-radius: var(--radius-lg);
+  place-items: center;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-main);
+  pointer-events: none;
+}
+#drag-overlay.active { display: grid; }
+
+/* Split Divider */
+#split-handle {
+  flex: 0 0 5px;
+  background: var(--border-strong);
+  cursor: col-resize;
+  position: relative;
+  transition: background 0.15s;
+  z-index: 10;
+}
+#split-handle:hover, #split-handle.dragging {
+  background: var(--brand-primary);
+}
+
+/* ── Status Bar ────────────────────────────────────────────── */
+#status-bar {
+  flex: 0 0 30px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 16px;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-strong);
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-dim);
+}
+.status-dot.ready { background: #3b82f6; }
+.status-dot.ok { background: var(--success); }
+.status-dot.err { background: var(--danger); }
+
+.status-stat {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+.panel-toggle-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: none;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  transition: color 0.12s, background 0.12s;
+}
+.panel-toggle-btn:hover {
+  color: var(--text-main);
+  background: var(--bg-surface-2);
+}
+
+/* ── Collapsible Bottom Panel (Terminal / Errors / AST) ─────── */
+#bottom-panel {
+  flex: 0 0 0px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-app);
+  border-top: 1px solid var(--border-strong);
+  transition: flex-basis 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 15;
+}
+#bottom-panel.open {
+  flex-basis: 310px;
+}
+
+.panel-tabs-bar {
+  flex: 0 0 40px;
+  display: flex;
+  align-items: stretch;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-strong);
+  padding: 4px 10px 0;
+  overflow-x: auto;
+}
+.panel-tabs-bar::-webkit-scrollbar { display: none; }
+
+.ptab {
+  padding: 0 15px;
+  border: none;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  transition: color 0.12s, border-color 0.12s;
+}
+.ptab:hover { color: var(--text-main); }
+.ptab.active {
+  color: var(--text-main);
+  border-bottom-color: var(--brand-primary);
+  font-weight: 600;
+}
+.ptab-run.active {
+  color: var(--success);
+  border-bottom-color: var(--success);
+}
+.ptab-badge {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-2);
+  color: var(--text-dim);
+  border: 1px solid var(--border-subtle);
+}
+
+.panel-close-btn {
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: color 0.12s;
+}
+.panel-close-btn:hover { color: var(--text-main); }
+
+.panel-view-body {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+.panel-view {
+  display: none;
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  padding: 14px 16px;
+}
+.panel-view.active { display: block; }
+
+/* ── Interactive Terminal Screen ───────────────────────────── */
+#terminal-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 8px;
+  padding: 10px 14px;
+}
+.terminal-top-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.term-status-pill {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  display: none;
+}
+.term-console-box {
+  flex: 1;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.65;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--text-main);
+  display: flex;
+  flex-direction: column;
+}
+.term-console-box::-webkit-scrollbar { width: 5px; }
+.term-console-box::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+
+#term-log-stream { flex-shrink: 0; }
+.log-idle { color: var(--text-dim); font-style: italic; }
+.log-echo { color: #58a6ff; font-weight: 600; }
+.log-err { color: #f85149; }
+.log-compile-err { color: #d29922; }
+.log-footer {
+  color: var(--text-dim);
+  border-top: 1px solid var(--border-strong);
+  margin-top: 8px;
+  padding-top: 6px;
+  font-size: 0.76rem;
+}
+
+/* Prompt Line for Live Terminal Input */
+#term-input-line {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+.prompt-chevron {
+  color: var(--success);
+  font-weight: 700;
+  font-size: 14px;
+  user-select: none;
+}
+#term-input-box {
+  flex: 1;
+  padding: 6px 10px;
+  background: var(--bg-app);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.12s;
+}
+#term-input-box:focus {
+  border-color: var(--brand-primary);
+}
+
+/* Batch STDIN Expandable Drawer */
+#batch-stdin-drawer {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+#batch-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  resize: vertical;
+  min-height: 54px;
+  max-height: 110px;
+  outline: none;
+}
+#batch-textarea:focus { border-color: var(--brand-primary); }
+
+/* ── Diagnostic Errors & AST Viewer ────────────────────────── */
+.error-card-stack { display: flex; flex-direction: column; gap: 8px; }
+.diag-card {
+  display: flex;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--danger);
+  border-radius: var(--radius-md);
+  font-size: 0.84rem;
+  animation: fadeIn 0.15s ease;
+}
+.diag-icon {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--danger);
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+.diag-message {
+  color: var(--text-main);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.diag-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+}
+.diag-phase-tag {
+  padding: 1px 7px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text-main);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.success-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--success);
+  border-radius: var(--radius-md);
+  font-size: 0.84rem;
+  color: var(--text-main);
+}
+.ast-json-view {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.65;
+  color: var(--text-muted);
+  white-space: pre;
+}
+.json-key    { color: #79c0ff; }
+.json-string { color: #a5d6a7; }
+.json-number { color: #ffa657; }
+.json-bool   { color: #c3c9d5; }
+.json-null   { color: #ffa657; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+
+/* ── Toasts ────────────────────────────────────────────────── */
+#toast-shelf {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast-bubble {
+  padding: 9px 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--text-main);
+  box-shadow: var(--shadow-md);
+  transform: translateX(110%);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.toast-bubble.show { transform: none; }
+.toast-bubble.ok { border-left: 3px solid var(--success); }
+.toast-bubble.err { border-left: 3px solid var(--danger); }
+
+/* ── Custom Scrollbars ─────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+
+/* ── Light Mode CodeMirror Fine-tuning ─────────────────────── */
+[data-theme="light"] .CodeMirror { background: #ffffff !important; color: #1f2328 !important; }
+[data-theme="light"] .cm-s-one-dark .CodeMirror-gutters { background: #f6f8fa !important; border-right-color: #d0d7de !important; }
+[data-theme="light"] .cm-s-one-dark .CodeMirror-linenumber { color: #8c959f !important; }
+[data-theme="light"] .cm-s-one-dark span.cm-keyword { color: #cf222e !important; font-weight: 600; }
+[data-theme="light"] .cm-s-one-dark span.cm-string { color: #0a3069 !important; }
+[data-theme="light"] .cm-s-one-dark span.cm-number { color: #0550ae !important; }
+[data-theme="light"] .cm-s-one-dark span.cm-comment { color: #57606a !important; font-style: italic; }
+[data-theme="light"] .cm-s-one-dark span.cm-def { color: #8250df !important; }
+[data-theme="light"] .cm-s-one-dark .CodeMirror-activeline-background { background: #f6f8fa !important; }
+[data-theme="light"] #java-empty-state, [data-theme="light"] .term-console-box { background: #f6f8fa; }
+[data-theme="light"] #term-input-box, [data-theme="light"] #batch-textarea { background: #ffffff; }
+</style>
+</head>
+<body>
+
+<!-- ═════════════════════════════════════════════════════════════
+     HEADER NAVIGATION
+═════════════════════════════════════════════════════════════ -->
+<header id="header" role="banner">
+  <!-- Brand Identity -->
+  <div class="brand">
+    <div class="brand-icon-box" aria-hidden="true">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+      </svg>
+    </div>
+    <div class="brand-name">
+      <span>cppjava</span>
+      <span class="brand-badge">v1.0</span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Sidebar Toggle -->
+  <button class="btn-icon" id="btn-toggle-sidebar" title="Toggle Corpus Sidebar (Ctrl+B)" aria-label="Toggle sidebar">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+      <line x1="9" y1="3" x2="9" y2="21"/>
+    </svg>
+  </button>
+
+  <!-- Output Class Name Input -->
+  <div class="class-input-group" title="Target Java Class Name (matches output file)">
+    <span class="class-label">class</span>
+    <input class="class-input" id="cls-input" type="text" value="Main" maxlength="40" spellcheck="false" autocomplete="off"/>
+  </div>
+
+  <!-- Primary Action: Convert -->
+  <button class="btn-action btn-convert" id="btn-convert" title="Transpile C++ to Java (Ctrl+Enter)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/>
+    </svg>
+    <span class="btn-text">Convert</span>
+    <span class="kbd-badge">Ctrl ↵</span>
+    <div class="spinner-dot"></div>
+  </button>
+
+  <!-- Primary Action: Run -->
+  <button class="btn-action btn-run" id="btn-run" disabled title="Run Java in Interactive Terminal (Ctrl+Shift+Enter)">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+      <polygon points="5 3 19 12 5 21 5 3"/>
+    </svg>
+    <span class="btn-text">Run</span>
+    <span class="kbd-badge">⇧ Ctrl ↵</span>
+    <div class="spinner-dot"></div>
+  </button>
+
+  <!-- Stop Execution Action -->
+  <button class="btn-action btn-stop" id="btn-stop" title="Terminate Running Process">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+      <rect x="4" y="4" width="16" height="16" rx="2"/>
+    </svg>
+    <span>Stop</span>
+  </button>
+
+  <div class="spacer"></div>
+
+  <!-- Reset / Clear Buttons -->
+  <button class="btn-action btn-secondary" id="btn-clear" title="Clear Code Editors">Clear</button>
+
+  <!-- File Upload Button -->
+  <label class="btn-action btn-secondary" for="file-input" style="cursor:pointer" title="Open Local C++ Source (.cpp)">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+    <span>Open File</span>
+  </label>
+  <input type="file" id="file-input" accept=".cpp,.cxx,.cc,.c" aria-label="Upload C++ File"/>
+
+  <div class="divider"></div>
+
+  <!-- Theme Toggle Button -->
+  <button class="theme-switch-btn" id="btn-theme" title="Toggle Light / Dark Mode" aria-label="Toggle theme">
+    <svg id="theme-sun-icon" style="display:none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>
+    <svg id="theme-moon-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+  </button>
+</header>
+
+<!-- ═════════════════════════════════════════════════════════════
+     APP BODY (SIDEBAR + MAIN WORKSPACE)
+═════════════════════════════════════════════════════════════ -->
+<div id="app-body">
+
+  <!-- Corpus Explorer Sidebar -->
+  <aside id="sidebar" aria-label="Corpus test programs">
+    <div class="sidebar-header">
+      <div class="sidebar-title">
+        <span>Test Corpus</span>
+        <span class="corpus-counter" id="corpus-count">52</span>
+      </div>
+    </div>
+    <div class="sidebar-search-wrap">
+      <input class="sidebar-search" id="sidebar-search" type="text" placeholder="Filter programs..." autocomplete="off"/>
+    </div>
+    <div id="examples-list" role="list"></div>
+    <div class="sidebar-footer">
+      <span>Verified against GCC 13 & JDK 25</span>
+    </div>
+  </aside>
+
+  <!-- Central Work Area -->
+  <main id="main-area">
+
+    <!-- Compilation Phase Stepper Progression -->
+    <div id="phase-stepper" role="progressbar" aria-label="Compilation Pipeline Stages">
+      <div class="stepper-step" id="ph-lexer"><div class="stepper-dot"></div>Lexer</div>
+      <div class="stepper-arrow" aria-hidden="true">›</div>
+      <div class="stepper-step" id="ph-preprocessor"><div class="stepper-dot"></div>Preprocessor</div>
+      <div class="stepper-arrow" aria-hidden="true">›</div>
+      <div class="stepper-step" id="ph-parser"><div class="stepper-dot"></div>Parser</div>
+      <div class="stepper-arrow" aria-hidden="true">›</div>
+      <div class="stepper-step" id="ph-semantic"><div class="stepper-dot"></div>Semantic</div>
+      <div class="stepper-arrow" aria-hidden="true">›</div>
+      <div class="stepper-step" id="ph-ir"><div class="stepper-dot"></div>IR</div>
+      <div class="stepper-arrow" aria-hidden="true">›</div>
+      <div class="stepper-step" id="ph-codegen"><div class="stepper-dot"></div>Codegen</div>
+    </div>
+
+    <!-- Dual Split Editor Panes -->
+    <div id="editors-split">
+
+      <!-- Left Pane: C++ Source Input -->
+      <section class="editor-pane" id="cpp-pane" aria-label="C++ Source Editor">
+        <div class="pane-tab-bar">
+          <div class="pane-file-tab">
+            <span class="file-badge badge-cpp">C++17</span>
+            <span>input.cpp</span>
+          </div>
+          <div class="pane-actions">
+            <button class="btn-icon" id="btn-cpp-reset" title="Reset to Factorial Example" aria-label="Reset code">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+              </svg>
+            </button>
+            <button class="btn-icon" id="btn-cpp-copy" title="Copy C++ Source Code" aria-label="Copy C++ code">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div id="drag-overlay" aria-hidden="true">Drop .cpp source file here</div>
+        <div class="cm-container" id="cpp-host"></div>
+      </section>
+
+      <!-- Draggable Split Separator -->
+      <div id="split-handle" role="separator" aria-orientation="vertical" tabindex="0"></div>
+
+      <!-- Right Pane: Java Output -->
+      <section class="editor-pane" id="java-pane" aria-label="Java Code Output">
+        <div class="pane-tab-bar">
+          <div class="pane-file-tab">
+            <span class="file-badge badge-java">Java</span>
+            <span id="java-tab-name">Main.java</span>
+          </div>
+          <div class="pane-actions">
+            <button class="btn-icon" id="btn-java-copy" title="Copy Java Code" aria-label="Copy Java code">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+            </button>
+            <button class="btn-icon" id="btn-java-download" title="Download .java File" aria-label="Download Java file">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="cm-container" id="java-host">
+          <div id="java-empty-state">
+            <div class="empty-graphic" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+              </svg>
+            </div>
+            <div class="empty-title">Ready to Transpile</div>
+            <div class="empty-hint">Press <kbd>Ctrl+Enter</kbd> or click <b>Convert</b></div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Bottom Status Bar -->
+    <footer id="status-bar" role="status">
+      <div class="status-pill">
+        <div class="status-dot ready" id="status-dot" aria-hidden="true"></div>
+        <span id="status-text">Ready</span>
+      </div>
+      <div class="status-pill" id="cursor-pos-pill" style="display:none">
+        <span class="status-stat" id="cursor-pos">Ln 1, Col 1</span>
+      </div>
+      <div class="status-pill">
+        <span class="status-stat" id="char-counter">0 chars</span>
+      </div>
+      <div class="status-pill" id="perf-time-pill" style="display:none">
+        <span class="status-stat" id="perf-time"></span>
+      </div>
+      <button class="panel-toggle-btn" id="panel-toggle-btn" aria-expanded="false" aria-controls="bottom-panel"></button>
+    </footer>
+
+    <!-- Bottom Collapsible Console & Inspector Panel -->
+    <div id="bottom-panel" aria-label="Details and Terminal Panel">
+      <div class="panel-tabs-bar" role="tablist">
+        <button class="ptab ptab-run active" role="tab" aria-selected="true" data-tab="terminal">
+          <span>▶ Terminal Console</span>
+        </button>
+        <button class="ptab" role="tab" aria-selected="false" data-tab="errors">
+          <span>Problems</span>
+          <span class="ptab-badge" id="errors-count-badge">0</span>
+        </button>
+        <button class="ptab" role="tab" aria-selected="false" data-tab="tokens">Tokens</button>
+        <button class="ptab" role="tab" aria-selected="false" data-tab="ast">AST</button>
+        <button class="ptab" role="tab" aria-selected="false" data-tab="annotated_ast">Annotated AST</button>
+        <button class="ptab" role="tab" aria-selected="false" data-tab="ir">IR</button>
+        <div class="spacer"></div>
+        <button class="panel-close-btn" id="btn-close-panel" title="Close Panel" aria-label="Close panel">✕</button>
+      </div>
+
+      <div class="panel-view-body">
+
+        <!-- Interactive Terminal Screen -->
+        <div class="panel-view active" id="view-terminal" role="tabpanel" style="padding:0">
+          <div id="terminal-view">
+            <div class="terminal-top-bar">
+              <span style="font-weight:600">Console</span>
+              <span class="term-status-pill" id="term-exit-badge"></span>
+              <div class="spacer"></div>
+              <button class="btn-action btn-secondary" id="btn-toggle-batch" style="padding:2px 8px;font-size:0.75rem">Batch STDIN</button>
+              <button class="btn-icon" id="btn-clear-term" title="Clear Terminal Console" aria-label="Clear terminal" style="width:24px;height:24px">✕</button>
+            </div>
+
+            <!-- Optional Multi-line STDIN drawer -->
+            <div id="batch-stdin-drawer">
+              <textarea id="batch-textarea" placeholder="Paste multi-line input here before execution (one value per line)..." spellcheck="false" aria-label="Batch standard input"></textarea>
+            </div>
+
+            <!-- Terminal Screen Container -->
+            <div class="term-console-box" id="term-console-box" tabindex="0" role="region" aria-label="Interactive Terminal Output">
+              <div id="term-log-stream">
+                <span class="log-idle">cppjava terminal engine ready. Convert C++ and press ▶ Run.</span>
+              </div>
+
+              <!-- Interactive Prompt Input Line -->
+              <div id="term-input-line">
+                <span class="prompt-chevron" aria-hidden="true">❯</span>
+                <input id="term-input-box" type="text" placeholder="Enter input value and press Enter…" autocomplete="off" spellcheck="false" aria-label="Terminal stdin prompt"/>
+                <button class="btn-action btn-convert" id="btn-send-stdin" style="padding:4px 12px;font-size:0.75rem">Send</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Problems / Diagnostic Errors View -->
+        <div class="panel-view" id="view-errors" role="tabpanel">
+          <div class="error-card-stack" id="errors-card-stack">
+            <div style="color:var(--text-dim);font-size:0.84rem;font-style:italic">No compiler errors.</div>
+          </div>
+        </div>
+
+        <!-- Intermediate JSON Stage Artifacts -->
+        <div class="panel-view" id="view-tokens" role="tabpanel"><div class="ast-json-view" id="json-tokens"></div></div>
+        <div class="panel-view" id="view-ast" role="tabpanel"><div class="ast-json-view" id="json-ast"></div></div>
+        <div class="panel-view" id="view-annotated_ast" role="tabpanel"><div class="ast-json-view" id="json-annotated_ast"></div></div>
+        <div class="panel-view" id="view-ir" role="tabpanel"><div class="ast-json-view" id="json-ir"></div></div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast shelf -->
+<div id="toast-shelf" aria-live="polite"></div>
+
+<!-- ═════════════════════════════════════════════════════════════
+     SCRIPTS & APPLICATION LOGIC
+═════════════════════════════════════════════════════════════ -->
+<script src="/static/cm/codemirror.min.js"></script>
+<script src="/static/cm/clike.min.js"></script>
+<script src="/static/cm/matchbrackets.js"></script>
+<script src="/static/cm/closebrackets.js"></script>
+<script src="/static/cm/activeline.js"></script>
+
+<script>
+'use strict';
+
+const DEFAULT_CODE = `#include <iostream>
+using namespace std;
+
+long long factorial(int n) {
+    if (n < 0) return -1;
+    if (n <= 1) return 1;
+    return n * factorial(n - 1);
+}
+
+int main() {
+    int number;
+
+    cout << "Enter a non-negative integer: ";
+    cin >> number;
+
+    int answer = factorial(number);
+
+    if (answer == -1) {
+        cout << "Invalid input: number must be non-negative." << endl;
+    } else {
+        cout << "Factorial of " << number << " is " << answer << endl;
+    }
+
+    return 0;
+}`;
+
+const PHASES = ['lexer', 'preprocessor', 'parser', 'semantic', 'ir', 'codegen'];
+
+let cppEditor, javaEditor;
+let lastCompiledJava = '';
+let activeClassName = 'Main';
+let errorMarkers = [];
+let phaseAnimTimer = null, phaseIndex = 0;
+let currentSessionId = null;
+let queuedBatchLines = [];
+let corpusCatalog = [];
+
+/* ─── Initialization ───────────────────────────────────────── */
+function initApp() {
+  initTheme();
+  initCodeMirror();
+  loadCorpusExamples();
+  wireEventHandlers();
+}
+
+/* ─── Theme Management ─────────────────────────────────────── */
+function initTheme() {
+  const saved = localStorage.getItem('cppjava-theme') || 'dark';
+  applyTheme(saved, false);
+}
+
+function applyTheme(themeName, persist = true) {
+  document.documentElement.setAttribute('data-theme', themeName);
+  const isDark = themeName === 'dark';
+  g('theme-sun-icon').style.display = isDark ? 'block' : 'none';
+  g('theme-moon-icon').style.display = isDark ? 'none' : 'block';
+  
+  if (persist) localStorage.setItem('cppjava-theme', themeName);
+  if (cppEditor) cppEditor.refresh();
+  if (javaEditor) javaEditor.refresh();
+}
+
+function currentTheme() {
+  return document.documentElement.getAttribute('data-theme') || 'dark';
+}
+
+/* ─── CodeMirror Editors ───────────────────────────────────── */
+function initCodeMirror() {
+  const sharedConfig = {
+    theme: 'one-dark',
+    lineNumbers: true,
+    matchBrackets: true,
+    autoCloseBrackets: true,
+    styleActiveLine: true,
+    indentUnit: 4,
+    tabSize: 4,
+    indentWithTabs: false,
+    extraKeys: {
+      'Ctrl-Enter': triggerConvert,
+      'Cmd-Enter': triggerConvert
+    }
+  };
+
+  cppEditor = CodeMirror(g('cpp-host'), {
+    ...sharedConfig,
+    mode: 'text/x-c++src',
+    value: DEFAULT_CODE
+  });
+
+  javaEditor = CodeMirror(g('java-host'), {
+    ...sharedConfig,
+    mode: 'text/x-java',
+    value: '',
+    readOnly: true,
+    cursorBlinkRate: -1
+  });
+
+  cppEditor.on('change', () => {
+    updateCharCount();
+    clearDiagnosticMarkers();
+  });
+
+  cppEditor.on('cursorActivity', () => {
+    const cur = cppEditor.getCursor();
+    g('cursor-pos').textContent = `Ln ${cur.line + 1}, Col ${cur.ch + 1}`;
+    g('cursor-pos-pill').style.display = 'flex';
+  });
+
+  updateCharCount();
+}
+
+function updateCharCount() {
+  const len = cppEditor.getValue().length;
+  g('char-counter').textContent = `${len.toLocaleString()} chars`;
+}
+
+/* ─── Convert Handler ──────────────────────────────────────── */
+async function triggerConvert() {
+  const source = cppEditor.getValue().trim();
+  if (!source) {
+    showToast('Please provide C++ code to convert', 'err');
+    return;
+  }
+
+  const clsName = g('cls-input').value.trim() || 'Main';
+  setButtonBusy('btn-convert', true);
+  updateStatus('ready', 'Transpiling…');
+  clearDiagnosticMarkers();
+  showPhaseStepper();
+  startPhaseAnimation();
+
+  const startTime = performance.now();
+  try {
+    const res = await fetch('/api/convert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: source, class_name: clsName })
+    });
+    const data = await res.json();
+    const elapsed = Math.round(performance.now() - startTime);
+    handleConvertResponse(data, elapsed, clsName);
+  } catch (err) {
+    updateStatus('err', 'Network error');
+    showToast(`Network error: ${err.message}`, 'err');
+  } finally {
+    setButtonBusy('btn-convert', false);
+    stopPhaseAnimation();
+  }
+}
+
+function handleConvertResponse(data, elapsedMs, clsName) {
+  if (data.success) {
+    lastCompiledJava = data.java;
+    activeClassName = clsName;
+
+    g('java-empty-state').style.display = 'none';
+    g('java-tab-name').textContent = `${clsName}.java`;
+    javaEditor.setValue(data.java);
+    javaEditor.refresh();
+
+    g('btn-run').disabled = false;
+
+    updateStatus('ok', `Transpiled in ${elapsedMs}ms`);
+    g('perf-time').textContent = `⚡ ${elapsedMs}ms`;
+    g('perf-time-pill').style.display = 'flex';
+    showToast(`Transpiled successfully in ${elapsedMs}ms`, 'ok');
+
+    markAllPhases('ok');
+    populateInspectionArtifacts(data.phases);
+
+    g('errors-card-stack').innerHTML = `<div class="success-banner">✓ Compilation succeeded in ${elapsedMs}ms with zero errors.</div>`;
+    g('errors-count-badge').textContent = '0';
+    showPanelToggleAction('Console');
+
+    g('term-log-stream').innerHTML = '<span class="log-idle">Program ready. Click ▶ Run to execute in interactive terminal.</span>';
+    g('term-exit-badge').style.display = 'none';
+  } else {
+    lastCompiledJava = '';
+    g('btn-run').disabled = true;
+    javaEditor.setValue('');
+    g('java-empty-state').style.display = 'flex';
+
+    const count = data.errors.length;
+    updateStatus('err', `${count} error${count > 1 ? 's' : ''}`);
+    showToast(`${count} compile error${count > 1 ? 's' : ''}`, 'err');
+
+    renderDiagnosticErrors(data.errors);
+    markErrorLines(data.errors);
+    markPhaseFailure(data.errors[0]?.phase);
+    openBottomPanel('errors');
+    showPanelToggleAction('Problems');
+  }
+}
+
+/* ─── Interactive Process Runner ───────────────────────────── */
+async function triggerRun() {
+  if (!lastCompiledJava) {
+    showToast('Please transpile code before running', 'err');
+    return;
+  }
+
+  const batchText = g('batch-textarea').value.trim();
+  queuedBatchLines = batchText ? batchText.split('\n') : [];
+
+  setButtonBusy('btn-run', true);
+  g('btn-stop').style.display = 'inline-flex';
+  updateStatus('ready', 'Running…');
+  openBottomPanel('terminal');
+
+  g('term-log-stream').innerHTML = '';
+  hideTerminalInputPrompt();
+  g('term-exit-badge').style.display = 'none';
+
+  try {
+    const res = await fetch('/api/run/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ java: lastCompiledJava, class_name: activeClassName })
+    });
+    const data = await res.json();
+
+    if (!data.success) {
+      appendTerminalOutput(`[javac compilation error]\n${data.compile_stderr}\n`, 'log-compile-err');
+      handleSessionCompletion(data.exit_code || 1, 0);
+      return;
+    }
+
+    currentSessionId = data.session_id;
+
+    if (data.stdout) appendTerminalOutput(data.stdout);
+    if (data.stderr) appendTerminalOutput(data.stderr, 'log-err');
+
+    if (data.is_done) {
+      handleSessionCompletion(data.exit_code, data.elapsed_ms);
+    } else {
+      processNextAwaitingInput();
+    }
+  } catch (err) {
+    appendTerminalOutput(`Execution error: ${err.message}\n`, 'log-err');
+    handleSessionCompletion(1, 0);
+  } finally {
+    setButtonBusy('btn-run', false);
+  }
+}
+
+function processNextAwaitingInput() {
+  if (queuedBatchLines.length > 0) {
+    const nextLine = queuedBatchLines.shift();
+    transmitInputString(nextLine);
+    return;
+  }
+  showTerminalInputPrompt();
+}
+
+async function transmitInputString(text) {
+  if (!currentSessionId) return;
+
+  hideTerminalInputPrompt();
+  appendTerminalOutput(text + '\n', 'log-echo');
+
+  try {
+    const res = await fetch('/api/run/input', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: currentSessionId, input: text })
+    });
+    const data = await res.json();
+
+    if (data.stdout) appendTerminalOutput(data.stdout);
+    if (data.stderr) appendTerminalOutput(data.stderr, 'log-err');
+
+    if (data.is_done) {
+      handleSessionCompletion(data.exit_code, data.elapsed_ms);
+    } else {
+      processNextAwaitingInput();
+    }
+  } catch (err) {
+    appendTerminalOutput(`Input transmission failure: ${err.message}\n`, 'log-err');
+    handleSessionCompletion(1, 0);
+  }
+}
+
+function handleSessionCompletion(exitCode, elapsedMs) {
+  currentSessionId = null;
+  hideTerminalInputPrompt();
+  g('btn-stop').style.display = 'none';
+
+  const isSuccess = exitCode === 0;
+  appendTerminalMeta(`Process exited with code ${exitCode} (${elapsedMs}ms)`);
+
+  const badge = g('term-exit-badge');
+  badge.textContent = `exit ${exitCode}`;
+  badge.style.background = isSuccess ? 'var(--success-subtle)' : 'var(--danger-subtle)';
+  badge.style.color = isSuccess ? 'var(--success)' : 'var(--danger)';
+  badge.style.border = `1px solid ${isSuccess ? 'rgba(35,134,54,0.3)' : 'rgba(218,54,51,0.3)'}`;
+  badge.style.display = 'inline-block';
+
+  if (isSuccess) {
+    updateStatus('ok', `Completed in ${elapsedMs}ms`);
+    showToast(`Execution finished (exit 0, ${elapsedMs}ms)`, 'ok');
+  } else {
+    updateStatus('err', `Exit code ${exitCode}`);
+  }
+}
+
+async function triggerStop() {
+  if (currentSessionId) {
+    await fetch('/api/run/stop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: currentSessionId })
+    });
+    currentSessionId = null;
+  }
+  appendTerminalOutput('\n[Process terminated by user]\n', 'log-err');
+  handleSessionCompletion(130, 0);
+}
+
+/* ─── Terminal DOM Helpers ─────────────────────────────────── */
+function appendTerminalOutput(text, className = '') {
+  const stream = g('term-log-stream');
+  const span = document.createElement('span');
+  if (className) span.className = className;
+  span.textContent = text;
+  stream.appendChild(span);
+
+  const container = g('term-console-box');
+  container.scrollTop = container.scrollHeight;
+}
+
+function appendTerminalMeta(text) {
+  const stream = g('term-log-stream');
+  const div = document.createElement('div');
+  div.className = 'log-footer';
+  div.textContent = text;
+  stream.appendChild(div);
+
+  const container = g('term-console-box');
+  container.scrollTop = container.scrollHeight;
+}
+
+function showTerminalInputPrompt() {
+  const line = g('term-input-line');
+  line.style.display = 'flex';
+  const input = g('term-input-box');
+  input.value = '';
+  input.focus();
+
+  const container = g('term-console-box');
+  container.scrollTop = container.scrollHeight;
+}
+
+function hideTerminalInputPrompt() {
+  g('term-input-line').style.display = 'none';
+}
+
+/* ─── Phase Stepper Animation ──────────────────────────────── */
+function showPhaseStepper() {
+  g('phase-stepper').style.display = 'flex';
+  PHASES.forEach(p => setPhaseState(p, ''));
+}
+function startPhaseAnimation() {
+  phaseIndex = 0;
+  phaseAnimTimer = setInterval(() => {
+    if (phaseIndex > 0) setPhaseState(PHASES[phaseIndex - 1], 'ok');
+    if (phaseIndex < PHASES.length) { setPhaseState(PHASES[phaseIndex], 'active'); phaseIndex++; }
+  }, 115);
+}
+function stopPhaseAnimation() { clearInterval(phaseAnimTimer); }
+function setPhaseState(name, stateClass) {
+  const el = g('ph-' + name);
+  if (el) el.className = 'stepper-step' + (stateClass ? ' ' + stateClass : '');
+}
+function markAllPhases(stateClass) { PHASES.forEach(p => setPhaseState(p, stateClass)); }
+function markPhaseFailure(failedName) {
+  let matched = false;
+  PHASES.forEach(p => {
+    if (p === failedName) { setPhaseState(p, 'fail'); matched = true; }
+    else setPhaseState(p, matched ? '' : 'ok');
+  });
+}
+
+/* ─── Errors & CodeMirror Line Annotations ─────────────────── */
+const PHASE_LABELS = {
+  lexer: 'Lexer', preprocessor: 'Preprocessor', parser: 'Parser',
+  semantic: 'Semantic', ir: 'IR', codegen: 'Codegen', driver: 'Driver', internal: 'Internal'
+};
+
+function renderDiagnosticErrors(errors) {
+  g('errors-count-badge').textContent = errors.length;
+  g('errors-card-stack').innerHTML = errors.map(e => `
+    <div class="diag-card">
+      <div class="diag-icon" aria-hidden="true">✕</div>
+      <div>
+        <div class="diag-message">${escapeHtml(e.message)}</div>
+        <div class="diag-meta-row">
+          <span class="diag-phase-tag">${escapeHtml(PHASE_LABELS[e.phase] || e.phase)}</span>
+          <span>Line ${e.line}, Col ${e.column}</span>
+          <span>code: ${escapeHtml(e.code)}</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function markErrorLines(errors) {
+  errors.forEach(e => {
+    if (e.line > 0) {
+      cppEditor.addLineClass(e.line - 1, 'background', 'CodeMirror-line-error');
+      errorMarkers.push(e.line - 1);
+    }
+  });
+}
+
+function clearDiagnosticMarkers() {
+  errorMarkers.forEach(line => cppEditor.removeLineClass(line, 'background', 'CodeMirror-line-error'));
+  errorMarkers = [];
+}
+
+/* ─── AST / IR Stage Inspection ────────────────────────────── */
+function populateInspectionArtifacts(phases) {
+  ['tokens', 'preprocessed_tokens', 'ast', 'annotated_ast', 'ir'].forEach(k => {
+    const el = g('json-' + k);
+    if (el && phases[k] != null) el.innerHTML = highlightJsonSyntax(JSON.stringify(phases[k], null, 2));
+  });
+}
+
+function highlightJsonSyntax(rawJson) {
+  return rawJson
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/("(?:\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|\btrue\b|\bfalse\b|\bnull\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g, match => {
+      if (/^"/.test(match)) return /:$/.test(match) ? `<span class="json-key">${match}</span>` : `<span class="json-string">${match}</span>`;
+      if (/true|false/.test(match)) return `<span class="json-bool">${match}</span>`;
+      if (/null/.test(match)) return `<span class="json-null">${match}</span>`;
+      return `<span class="json-number">${match}</span>`;
+    });
+}
+
+/* ─── Bottom Panel UI Controllers ──────────────────────────── */
+function openBottomPanel(tabName) {
+  g('bottom-panel').classList.add('open');
+  g('panel-toggle-btn').setAttribute('aria-expanded', 'true');
+  switchBottomTab(tabName);
+}
+function closeBottomPanel() {
+  g('bottom-panel').classList.remove('open');
+  g('panel-toggle-btn').setAttribute('aria-expanded', 'false');
+}
+function switchBottomTab(targetTab) {
+  document.querySelectorAll('.ptab').forEach(b => {
+    const isSelected = b.dataset.tab === targetTab;
+    b.classList.toggle('active', isSelected);
+    b.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+  });
+  document.querySelectorAll('.panel-view').forEach(v => {
+    v.classList.toggle('active', v.id === 'view-' + targetTab);
+  });
+}
+function showPanelToggleAction(label) {
+  const btn = g('panel-toggle-btn');
+  btn.textContent = `▲ View ${label}`;
+  btn.style.display = 'block';
+}
+
+/* ─── Corpus Catalog & Search ──────────────────────────────── */
+async function loadCorpusExamples() {
+  try {
+    const res = await fetch('/api/examples');
+    corpusCatalog = await res.json();
+    g('corpus-count').textContent = corpusCatalog.length;
+    renderCorpusList(corpusCatalog);
+  } catch (err) {
+    g('examples-list').innerHTML = '<div style="padding:12px;font-size:0.8rem;color:var(--danger)">Failed to load examples</div>';
+  }
+}
+
+function renderCorpusList(items) {
+  const container = g('examples-list');
+  if (!items.length) {
+    container.innerHTML = '<div style="padding:12px;font-size:0.8rem;color:var(--text-dim)">No matching examples</div>';
+    return;
+  }
+  container.innerHTML = items.map((ex, i) => `
+    <div class="example-entry" role="listitem" data-idx="${i}" title="${escapeHtml(ex.name)}">
+      <span class="example-idx">${String(i + 1).padStart(2, '0')}</span>
+      <span class="example-name">${formatExampleTitle(ex.name)}</span>
+    </div>
+  `).join('');
+
+  container.querySelectorAll('.example-entry').forEach(row => {
+    row.addEventListener('click', () => {
+      const idx = +row.dataset.idx;
+      loadExampleItem(items[idx], row);
+    });
+  });
+}
+
+function formatExampleTitle(name) {
+  return name.replace(/^\d+_/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function loadExampleItem(example, rowElement) {
+  cppEditor.setValue(example.source);
+  clearDiagnosticMarkers();
+  javaEditor.setValue('');
+  lastCompiledJava = '';
+  g('java-empty-state').style.display = 'flex';
+  g('btn-run').disabled = true;
+
+  updateStatus('ready', 'Ready');
+  g('phase-stepper').style.display = 'none';
+  g('perf-time-pill').style.display = 'none';
+  closeBottomPanel();
+
+  document.querySelectorAll('.example-entry').forEach(el => el.classList.remove('active'));
+  rowElement.classList.add('active');
+
+  g('cls-input').value = 'Main';
+  cppEditor.focus();
+  showToast(`Loaded: ${formatExampleTitle(example.name)}`, 'ok');
+}
+
+/* ─── Wire User Interactions & Shortcuts ───────────────────── */
+function wireEventHandlers() {
+  // Core Actions
+  g('btn-convert').addEventListener('click', triggerConvert);
+  g('btn-run').addEventListener('click', triggerRun);
+  g('btn-stop').addEventListener('click', triggerStop);
+
+  // Terminal Input Submission
+  g('btn-send-stdin').addEventListener('click', () => {
+    const val = g('term-input-box').value;
+    transmitInputString(val);
+  });
+  g('term-input-box').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const val = g('term-input-box').value;
+      transmitInputString(val);
+    }
+  });
+
+  // Sidebar Controls
+  g('btn-toggle-sidebar').addEventListener('click', () => {
+    g('sidebar').classList.toggle('collapsed');
+  });
+
+  g('sidebar-search').addEventListener('input', e => {
+    const q = e.target.value.toLowerCase().trim();
+    const filtered = corpusCatalog.filter(c => c.name.toLowerCase().includes(q));
+    renderCorpusList(filtered);
+  });
+
+  // Batch STDIN Drawer
+  g('btn-toggle-batch').addEventListener('click', () => {
+    const drawer = g('batch-stdin-drawer');
+    drawer.style.display = drawer.style.display === 'flex' ? 'none' : 'flex';
+  });
+
+  // Clear Terminal
+  g('btn-clear-term').addEventListener('click', () => {
+    g('term-log-stream').innerHTML = '<span class="log-idle">Console cleared.</span>';
+    hideTerminalInputPrompt();
+    g('term-exit-badge').style.display = 'none';
+  });
+
+  // Theme Toggle
+  g('btn-theme').addEventListener('click', () => {
+    applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
+  });
+
+  // Editor Actions
+  g('btn-clear').addEventListener('click', () => {
+    cppEditor.setValue('');
+    javaEditor.setValue('');
+    clearDiagnosticMarkers();
+    lastCompiledJava = '';
+    g('java-empty-state').style.display = 'flex';
+    g('btn-run').disabled = true;
+    updateStatus('ready', 'Cleared');
+    g('phase-stepper').style.display = 'none';
+    g('perf-time-pill').style.display = 'none';
+    closeBottomPanel();
+    document.querySelectorAll('.example-entry').forEach(el => el.classList.remove('active'));
+    showToast('Cleared editors', 'ok');
+  });
+
+  g('btn-cpp-reset').addEventListener('click', () => {
+    cppEditor.setValue(DEFAULT_CODE);
+    javaEditor.setValue('');
+    clearDiagnosticMarkers();
+    lastCompiledJava = '';
+    g('java-empty-state').style.display = 'flex';
+    g('btn-run').disabled = true;
+    updateStatus('ready', 'Ready');
+    g('phase-stepper').style.display = 'none';
+    g('perf-time-pill').style.display = 'none';
+    closeBottomPanel();
+    document.querySelectorAll('.example-entry').forEach(el => el.classList.remove('active'));
+    showToast('Reset to factorial example', 'ok');
+  });
+
+  g('btn-cpp-copy').addEventListener('click', () => {
+    navigator.clipboard.writeText(cppEditor.getValue()).then(() => showToast('C++ source copied to clipboard', 'ok'));
+  });
+
+  g('btn-java-copy').addEventListener('click', () => {
+    const val = javaEditor.getValue();
+    if (!val) { showToast('No Java code to copy', 'err'); return; }
+    navigator.clipboard.writeText(val).then(() => showToast('Java code copied to clipboard', 'ok'));
+  });
+
+  g('btn-java-download').addEventListener('click', () => {
+    const val = javaEditor.getValue();
+    if (!val) { showToast('No Java code to download', 'err'); return; }
+    const clsName = g('cls-input').value.trim() || 'Main';
+    const blob = new Blob([val], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${clsName}.java`;
+    a.click();
+    showToast(`Downloaded ${clsName}.java`, 'ok');
+  });
+
+  // Local File Upload
+  g('file-input').onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      cppEditor.setValue(ev.target.result);
+      showToast(`Opened: ${file.name}`, 'ok');
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  // Drag and Drop File Target
+  const cppPane = g('cpp-pane');
+  const dragOverlay = g('drag-overlay');
+  cppPane.addEventListener('dragover', e => { e.preventDefault(); dragOverlay.classList.add('active'); });
+  cppPane.addEventListener('dragleave', () => dragOverlay.classList.remove('active'));
+  cppPane.addEventListener('drop', e => {
+    e.preventDefault();
+    dragOverlay.classList.remove('active');
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      cppEditor.setValue(ev.target.result);
+      showToast(`Loaded: ${file.name}`, 'ok');
+    };
+    reader.readAsText(file);
+  });
+
+  // Bottom Panel Tab Switchers
+  document.querySelectorAll('.ptab[data-tab]').forEach(tab => {
+    tab.addEventListener('click', () => switchBottomTab(tab.dataset.tab));
+  });
+  g('btn-close-panel').addEventListener('click', closeBottomPanel);
+  g('panel-toggle-btn').addEventListener('click', () => {
+    if (g('bottom-panel').classList.contains('open')) closeBottomPanel();
+    else openBottomPanel(lastCompiledJava ? 'terminal' : 'errors');
+  });
+
+  // Split Divider Dragging
+  const handle = g('split-handle');
+  const splitRow = g('editors-split');
+  const leftPane = g('cpp-pane');
+  const rightPane = g('java-pane');
+  let isDragging = false, startX = 0, initialWidth = 0;
+
+  handle.addEventListener('mousedown', e => {
+    isDragging = true;
+    startX = e.clientX;
+    initialWidth = leftPane.getBoundingClientRect().width;
+    handle.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    const total = splitRow.getBoundingClientRect().width - 5;
+    const newWidth = Math.max(200, Math.min(total - 200, initialWidth + (e.clientX - startX)));
+    leftPane.style.cssText = `flex:none;width:${newWidth}px`;
+    rightPane.style.cssText = `flex:none;width:${total - newWidth}px`;
+    cppEditor.refresh();
+    javaEditor.refresh();
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      handle.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+  });
+
+  // Global Keyboard Shortcuts
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+      e.preventDefault();
+      g('sidebar').classList.toggle('collapsed');
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      triggerConvert();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Enter') {
+      e.preventDefault();
+      triggerRun();
+    }
+    if (e.key === 'Escape') closeBottomPanel();
+  });
+}
+
+/* ─── Global Helpers ───────────────────────────────────────── */
+function g(id) { return document.getElementById(id); }
+function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+function setButtonBusy(id, isBusy) {
+  const el = g(id);
+  if (!el) return;
+  el.classList.toggle('busy', isBusy);
+  if (id === 'btn-run') el.disabled = isBusy;
+}
+
+function updateStatus(dotClass, text) {
+  g('status-dot').className = `status-dot ${dotClass}`;
+  g('status-text').textContent = text;
+}
+
+function showToast(message, type = 'ok') {
+  const shelf = g('toast-shelf');
+  const toast = document.createElement('div');
+  toast.className = `toast-bubble ${type}`;
+  toast.textContent = message;
+  shelf.appendChild(toast);
+  requestAnimationFrame(() => requestAnimationFrame(() => toast.classList.add('show')));
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 250);
+  }, 2600);
+}
+
+// Start Application
+initApp();
+</script>
+</body>
+</html>

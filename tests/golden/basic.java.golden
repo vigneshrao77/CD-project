@@ -1,0 +1,13 @@
+public class Main {
+    public static void main(String[] args) {
+        int count = 3;
+        if ((count > 0)) {
+            System.out.print(count);
+            System.out.println();
+        }
+        else {
+            System.out.print("empty");
+        }
+        return;
+    }
+}

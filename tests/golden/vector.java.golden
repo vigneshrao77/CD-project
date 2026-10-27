@@ -1,0 +1,11 @@
+import java.util.ArrayList;
+
+public class Main {
+    public static void main(String[] args) {
+        ArrayList<Integer> values = new ArrayList<>();
+        values.add(3);
+        System.out.print(values.get(0));
+        System.out.println();
+        return;
+    }
+}

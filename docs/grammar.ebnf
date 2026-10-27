@@ -1,0 +1,54 @@
+(* C++17 teaching/competitive-programming subset. Hand-written parser contract.
+   Tokens are produced by lexer.py and object macros expanded by preprocess.py.
+   Whitespace and comments are insignificant. Qualified names may start std::.
+   Unsupported C++ productions are diagnosed; they are not passed through. *)
+translation-unit = { using-declaration | declaration } EOF ;
+using-declaration = "using" ( "namespace" "std" | qualified-name ) ";" ;
+declaration = [ "const" ] type identifier
+              ( "(" parameter-list ")" ( block | ";" )
+              | declarator-tail { "," identifier declarator-tail } ";" ) ;
+parameter-list = [ parameter { "," parameter } ] ;
+parameter = [ "const" ] type identifier [ "=" assignment ] ;
+type = "int" | "long" "long" | "double" | "float" | "char" | "bool"
+     | "void" | "auto" | [ "std" "::" ] "string"
+     | [ "std" "::" ] ( "vector" | "set" | "unordered_set" ) "<" type ">"
+     | [ "std" "::" ] ( "pair" | "map" | "unordered_map" ) "<" type "," type ">" ;
+declarator-tail = { "[" [ expression ] "]" }
+                  [ "=" initializer | "(" argument-list ")" | initializer-list ] ;
+initializer = assignment | initializer-list ;
+initializer-list = "{" [ initializer { "," initializer } [ "," ] ] "}" ;
+block = "{" { statement } "}" ;
+statement = block | variable-declaration | expression ";" | ";"
+          | "if" "(" expression ")" statement [ "else" statement ]
+          | "while" "(" expression ")" statement
+          | "do" statement "while" "(" expression ")" ";"
+          | "for" "(" ( for-init ";" [ expression ] ";" [ expression ]
+                        | [ "const" ] type identifier ":" expression ) ")" statement
+          | "switch" "(" expression ")" "{" { switch-arm } "}"
+          | "break" ";" | "continue" ";" | "return" [ expression ] ";" ;
+variable-declaration = [ "const" ] type identifier declarator-tail
+                       { "," identifier declarator-tail } ";" ;
+for-init = [ variable-declaration-without-semicolon | expression ] ;
+switch-arm = ( "case" assignment | "default" ) ":" { statement } ;
+expression = assignment { "," assignment } ;
+assignment = conditional [ assignment-op assignment ] ;
+assignment-op = "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | "&=" | "^=" | "|=" ;
+conditional = binary [ "?" expression ":" assignment ] ;
+binary = unary { binary-op unary } ;
+(* Precedence, low to high; every row left associative:
+   || ; && ; | ; ^ ; & ; == != ; < <= > >= ; << >> ; + - ; * / %.
+   Assignment and conditional are right associative. Comma is lowest. *)
+unary = ( "+" | "-" | "!" | "~" | "++" | "--" | "*" ) unary
+      | "(" type ")" unary | postfix ;
+(* Unary * is supported only for STL iterators, never raw pointers. *)
+postfix = primary { "[" expression "]" | "(" argument-list ")"
+                  | ( "." | "->" ) identifier | "++" | "--" } ;
+primary = literal | qualified-name | "(" expression ")" | initializer-list
+        | type "(" argument-list ")" ;
+qualified-name = identifier { "::" identifier } ;
+argument-list = [ initializer { "," initializer } ] ;
+literal = integer | floating | string-literal | char-literal | "true" | "false" ;
+(* In template argument context, >> is split into two > tokens by the parser.
+   In expression context it always remains a right-shift operator.
+   References, pointers, lambdas, user templates/classes, allocation and other
+   unsupported declarations are rejected with categorized source diagnostics. *)
