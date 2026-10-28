@@ -486,11 +486,11 @@ body {
 
 /* Phase Stepper Bar */
 #phase-stepper {
-  flex: 0 0 36px;
+  flex: 0 0 40px;
   display: none;
   align-items: center;
   gap: 8px;
-  padding: 4px 16px;
+  padding: 8px 16px;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border-subtle);
   font-size: 0.78rem;
@@ -732,7 +732,6 @@ body {
   display: flex;
   flex-direction: column;
   background: var(--bg-app);
-  border-top: 1px solid var(--border-strong);
   transition: flex-basis 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 15;
 }
@@ -741,41 +740,52 @@ body {
 }
 
 .panel-tabs-bar {
-  flex: 0 0 40px;
+  flex: 0 0 44px;
   display: flex;
-  align-items: stretch;
+  align-items: center;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border-strong);
-  padding: 4px 10px 0;
+  padding: 8px 12px;
+  gap: 6px;
   overflow-x: auto;
 }
 .panel-tabs-bar::-webkit-scrollbar { display: none; }
 
 .ptab {
-  padding: 0 15px;
-  border: none;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   background: transparent;
   font-family: var(--font-sans);
   font-size: 0.82rem;
   font-weight: 500;
   color: var(--text-muted);
   cursor: pointer;
-  border-bottom: 2px solid transparent;
   white-space: nowrap;
   display: flex;
   align-items: center;
   gap: 7px;
-  transition: color 0.12s, border-color 0.12s;
+  transition: all 0.14s ease;
 }
-.ptab:hover { color: var(--text-main); }
+.ptab:hover {
+  color: var(--text-main);
+  background: var(--bg-surface-2);
+}
 .ptab.active {
   color: var(--text-main);
-  border-bottom-color: var(--brand-primary);
+  background: var(--bg-surface-2);
+  border-color: var(--border-strong);
   font-weight: 600;
 }
 .ptab-run.active {
   color: var(--success);
-  border-bottom-color: var(--success);
+  background: var(--success-subtle);
+  border-color: rgba(35, 134, 54, 0.3);
+}
+.ptab:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 .ptab-badge {
   font-family: var(--font-mono);
@@ -867,7 +877,7 @@ body {
   color: var(--text-dim);
   border-top: 1px solid var(--border-strong);
   margin-top: 8px;
-  padding-top: 6px;
+  padding-top: 8px;
   font-size: 0.76rem;
 }
 
@@ -1042,6 +1052,82 @@ body {
 [data-theme="light"] .cm-s-one-dark .CodeMirror-activeline-background { background: #f6f8fa !important; }
 [data-theme="light"] #java-empty-state, [data-theme="light"] .term-console-box { background: #f6f8fa; }
 [data-theme="light"] #term-input-box, [data-theme="light"] #batch-textarea { background: #ffffff; }
+
+/* ── Keyboard Accessibility & Focus Rings ──────────────────── */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.sidebar-search:focus-visible,
+.class-input:focus-visible,
+#term-input-box:focus-visible,
+#batch-textarea:focus-visible {
+  border-color: var(--brand-primary) !important;
+  box-shadow: var(--focus-ring) !important;
+}
+.example-entry:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: -2px;
+}
+#split-handle:focus-visible {
+  background: var(--brand-primary);
+  box-shadow: var(--focus-ring);
+}
+.ptab:focus-visible,
+.panel-close-btn:focus-visible,
+.panel-toggle-btn:focus-visible,
+.theme-switch-btn:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+input, textarea {
+  caret-color: var(--brand-primary);
+}
+
+/* ── Motion Sensitivity (WCAG 2.2.2 & 2.3.3) ────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  #bottom-panel, .toast-bubble, #sidebar, .btn-action, .ptab, .btn-icon, .sidebar-search, .class-input {
+    transition: none !important;
+  }
+  .spinner-dot {
+    animation: none !important;
+    opacity: 0.8;
+  }
+  * {
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Responsive Adaptations ────────────────────────────────── */
+@media (max-width: 860px) {
+  #sidebar {
+    position: absolute;
+    top: 52px;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    box-shadow: var(--shadow-md);
+  }
+  .kbd-badge { display: none !important; }
+}
+
+@media (max-width: 680px) {
+  #editors-split {
+    flex-direction: column !important;
+  }
+  #split-handle {
+    flex: 0 0 5px;
+    cursor: row-resize;
+    width: 100%;
+  }
+  .editor-pane {
+    min-height: 220px;
+  }
+  #header {
+    padding: 0 10px;
+    gap: 8px;
+  }
+  .brand-badge { display: none; }
+}
 </style>
 </head>
 <body>
@@ -1826,7 +1912,7 @@ function renderCorpusList(items) {
     return;
   }
   container.innerHTML = items.map((ex, i) => `
-    <div class="example-entry" role="listitem" data-idx="${i}" title="${escapeHtml(ex.name)}">
+    <div class="example-entry" role="listitem" tabindex="0" data-idx="${i}" title="${escapeHtml(ex.name)}">
       <span class="example-idx">${String(i + 1).padStart(2, '0')}</span>
       <span class="example-name">${formatExampleTitle(ex.name)}</span>
     </div>
@@ -1836,6 +1922,13 @@ function renderCorpusList(items) {
     row.addEventListener('click', () => {
       const idx = +row.dataset.idx;
       loadExampleItem(items[idx], row);
+    });
+    row.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        const idx = +row.dataset.idx;
+        loadExampleItem(items[idx], row);
+      }
     });
   });
 }
@@ -1998,7 +2091,26 @@ function wireEventHandlers() {
     reader.readAsText(file);
   });
 
-  // Bottom Panel Tab Switchers
+  // Bottom Panel Tab Switchers & Keyboard Arrow Navigation
+  const tablist = document.querySelector('.panel-tabs-bar');
+  if (tablist) {
+    tablist.addEventListener('keydown', e => {
+      const tabs = Array.from(tablist.querySelectorAll('.ptab'));
+      const activeIdx = tabs.indexOf(document.activeElement);
+      if (activeIdx === -1) return;
+      let target = null;
+      if (e.key === 'ArrowRight') target = tabs[(activeIdx + 1) % tabs.length];
+      else if (e.key === 'ArrowLeft') target = tabs[(activeIdx - 1 + tabs.length) % tabs.length];
+      else if (e.key === 'Home') target = tabs[0];
+      else if (e.key === 'End') target = tabs[tabs.length - 1];
+      if (target) {
+        e.preventDefault();
+        target.focus();
+        switchBottomTab(target.dataset.tab);
+      }
+    });
+  }
+
   document.querySelectorAll('.ptab[data-tab]').forEach(tab => {
     tab.addEventListener('click', () => switchBottomTab(tab.dataset.tab));
   });
@@ -2008,12 +2120,27 @@ function wireEventHandlers() {
     else openBottomPanel(lastCompiledJava ? 'terminal' : 'errors');
   });
 
-  // Split Divider Dragging
+  // Split Divider Dragging & Keyboard Resizing
   const handle = g('split-handle');
   const splitRow = g('editors-split');
   const leftPane = g('cpp-pane');
   const rightPane = g('java-pane');
   let isDragging = false, startX = 0, initialWidth = 0;
+
+  handle.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      const total = splitRow.getBoundingClientRect().width - 5;
+      const currentWidth = leftPane.getBoundingClientRect().width;
+      const step = 32;
+      const newWidth = Math.max(200, Math.min(total - 200, currentWidth + (e.key === 'ArrowRight' ? step : -step)));
+      leftPane.style.cssText = `flex:none;width:${newWidth}px`;
+      rightPane.style.cssText = `flex:none;width:${total - newWidth}px`;
+      handle.setAttribute('aria-valuenow', Math.round((newWidth / total) * 100));
+      cppEditor.refresh();
+      javaEditor.refresh();
+    }
+  });
 
   handle.addEventListener('mousedown', e => {
     isDragging = true;
